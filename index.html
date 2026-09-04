@@ -372,7 +372,7 @@ textarea{max-width:100%}
     </div>
     <div class="utility-wrap">
         <div class="sync-date" id="liveStamp">Local data · synced</div>
-        <button class="export-btn" id="exportBtn">Commit CSV / Export Backup</button>
+        <button class="export-btn" id="exportBtn">Force Save to Cloud</button>
     </div>
 </header>
 
@@ -983,22 +983,6 @@ function persistField(key,field,value){ const d=getDay(key); d[field]=value; sta
 function addTodo(key,text){ const d=getDay(key); normalizeTodos(d).push({text,done:false}); d.priority=d.todos.map(x=>x.text).join("\n"); persistDay(key); renderWeek(currentWeek); updateLiveMetrics(); }
 function updateTodo(key,index,done){ const d=getDay(key); normalizeTodos(d)[index].done=done; persistDay(key); const row=document.querySelector(`[data-todo-toggle="${key}:${index}"]`)?.closest(".todo-row"); if(row)row.classList.toggle("done",done); }
 function deleteTodo(key,index){ const d=getDay(key); normalizeTodos(d).splice(index,1); d.priority=d.todos.map(x=>x.text).join("\n"); persistDay(key); renderWeek(currentWeek); updateLiveMetrics(); }
-function exportCSV(){
-    const headers=["Date","Day","Starred","Schedule","Syllabus Chapters / Status","Today's Priority","IOC/PC Sheet","Phy Lec","Chem QCT","Math Lec","Phy DPP","IOC/OC Lec","Math RBC","Phy QCT","Total Qs","Hours"];
-    const lines=[headers.map(csvCell).join(",")]; const allDays=[];
-    for(let i=0;i<=daysBetween(START_DATE,END_DATE);i++)allDays.push(addDays(START_DATE,i));
-    allDays.forEach(key=>{
-        const d=getDay(key),tests=TEST_SCHEDULE[key]||[],missions=[];
-        tests.forEach((t,ti)=>testChapters(t.syllabus).forEach((ch,ci)=>{const k=missionKey(key,ti,ci);missions.push(`${d[k]?"✓":"○"} ${ch}`);}));
-        const schedule=tests.map(t=>t.name).join(" + "),weekday=new Intl.DateTimeFormat("en-US",{timeZone:"UTC",weekday:"long"}).format(parseKey(key));
-        const priorities=normalizeTodos(d).map(x=>`${x.done?"✓":"○"} ${x.text}`).join(" | ");
-        const row=[key,weekday,d.star?"YES":"",schedule,missions.join(" | "),priorities,d.iocpc||"",d.phylec?"YES":"",d.chemqct||"",d.mathlec?"YES":"",d.phydpp||"",d.iococlec?"YES":"",d.mathrbc||"",d.phyqct||"",formatNum(parseFirstNumber(d.qs)),formatNum(parseFirstNumber(d.hours))];
-        lines.push(row.map(csvCell).join(","));
-    });
-    const blob=new Blob([lines.join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); const url=URL.createObjectURL(blob);
-    a.href=url;a.download=`execution_protocol_${START_DATE}_to_${END_DATE}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);showFlash("Backup CSV committed.");
-}
-function csvCell(v){ const s=String(v??""); return /[",\n\r]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }
 
 document.addEventListener("input",e=>{
     const t=e.target;
@@ -1028,7 +1012,38 @@ document.addEventListener("keydown",e=>{
 });
 ["globalQsTarget","tableQsTarget"].forEach(id=>document.getElementById(id).addEventListener("change",e=>applyTargets(e.target.value,document.getElementById("globalHoursTarget").value)));
 ["globalHoursTarget","tableHoursTarget"].forEach(id=>document.getElementById(id).addEventListener("change",e=>applyTargets(document.getElementById("globalQsTarget").value,e.target.value)));
-document.getElementById("exportBtn").addEventListener("click",exportCSV);
+document.getElementById("exportBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("exportBtn");
+    btn.textContent = "Saving to Cloud...";
+    btn.style.opacity = "0.6";
+    btn.style.pointerEvents = "none"; // Prevents spam-clicking
+    
+    try {
+        // Sequentially upload each day to avoid tripping Google's rate limits
+        for (const key in stateCache) {
+            const dayData = stateCache[key];
+            
+            // Only upload days that actually have data (checkboxes, hours, priorities)
+            if (Object.keys(dayData).length > 0) {
+                await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ date: key, data: dayData })
+                });
+            }
+        }
+        showFlash("All data forced to cloud!");
+    } catch(e) {
+        showFlash("Sync error. Check connection.");
+        console.error(e);
+    }
+    
+    // Reset button state
+    btn.textContent = "Force Save to Cloud";
+    btn.style.opacity = "1";
+    btn.style.pointerEvents = "auto";
+});
 
 async function loadCloudData() {
     const liveStamp = document.getElementById("liveStamp");
