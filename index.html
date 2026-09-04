@@ -1035,7 +1035,9 @@ async function loadCloudData() {
     liveStamp.textContent = "Syncing from cloud...";
     try {
         const cacheBuster = new Date().getTime();
-        const response = await fetch(WEB_APP_URL + "?nocache=" + cacheBuster);
+        const response = await fetch(WEB_APP_URL + "?nocache=" + cacheBuster, {
+    cache: "no-store"
+});
         const cloudData = await response.json();
         
         Object.assign(stateCache, cloudData);
