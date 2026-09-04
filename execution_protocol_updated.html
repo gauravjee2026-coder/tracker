@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Execution Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+    --bg:#000;
+    --surface:#111114;
+    --surface2:#121214;
+    --card:#1c1c1e;
+    --card2:#1e1e20;
+    --text:#f5f5f7;
+    --muted:#86868b;
+    --muted2:#636366;
+    --border:#38383a;
+    --border-soft:rgba(255,255,255,.08);
+    --blue:#0a84ff;
+    --green:#30d158;
+    --yellow:#ffd60a;
+    --purple:#bf5af2;
+    --orange:#ff9f0a;
+    --red:#ff453a;
+    --shadow:0 18px 50px rgba(0,0,0,.34);
+    --radius:14px;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+body{overflow-x:hidden}
+button,input,textarea{font:inherit}
+button{color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 2px var(--blue),0 0 0 4px rgba(10,132,255,.2)}
+.app{width:100%;padding:26px clamp(12px,2.3vw,34px) 34px}
+.shell{max-width:1900px;margin:0 auto}
+.topbar{
+    display:grid;
+    grid-template-columns:minmax(280px,1fr) minmax(380px,1.25fr) auto;
+    gap:18px;
+    align-items:center;
+    padding:18px 20px;
+    background:linear-gradient(180deg,rgba(28,28,30,.92),rgba(17,17,20,.92));
+    border:1px solid var(--border-soft);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+}
+.brand-row{display:flex;align-items:center;gap:14px;min-width:0}
+.brand-mark{
+    width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+    background:#0f1012;border:1px solid #2b2b2e;color:var(--blue);flex:none
+}
+.brand-mark svg{width:22px;height:22px}
+.brand-title{font-weight:600;font-size:20px;letter-spacing:-.04em}
+.brand-sub{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.sync{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);white-space:nowrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(48,209,88,.08);animation:pulse 2s infinite}
+@keyframes pulse{50%{transform:scale(.8);opacity:.55}}
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hud-card,.utility-card{
+    min-width:0;padding:11px 14px;border:1px solid var(--border-soft);background:rgba(18,18,20,.84);border-radius:12px
+}
+.eyebrow{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted2);font-weight:600}
+.hud-value{font:600 20px var(--mono);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud-value.green{color:var(--green)}
+.utility-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.sync-date{font-size:11px;color:var(--muted);text-align:right;line-height:1.4}
+.export-btn{
+    border:1px solid rgba(10,132,255,.45);background:rgba(10,132,255,.11);color:#dcecff;
+    border-radius:11px;padding:10px 13px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap
+}
+.export-btn:hover{background:rgba(10,132,255,.2);border-color:rgba(10,132,255,.7)}
+.utility-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.remaining-card,.countdown-card{
+    border:1px solid rgba(255,255,255,.08);border-radius:15px;background:linear-gradient(180deg,#151518,#101012);
+    min-width:0;position:relative;overflow:hidden
+}
+.remaining-card{border-color:rgba(10,132,255,.32);box-shadow:0 0 0 1px rgba(10,132,255,.04) inset}
+.card-inner{padding:15px 17px}
+.card-label{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-label span:first-child{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.today-tag{font:500 10px var(--mono);color:var(--blue)}
+.remaining-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.big-metric{font:600 25px var(--mono);letter-spacing:-.04em}
+.big-metric.blue{color:#6db8ff}.big-metric.red{color:var(--red)}
+.metric-unit{font:500 11px var(--sans);color:var(--muted);margin-left:5px}
+.countdown-main{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-top:8px}
+.next-name{font-size:17px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.next-date{font:500 11px var(--mono);color:var(--muted);margin-top:6px}
+.days{font:600 25px var(--mono);color:var(--green);white-space:nowrap}
+.days.today{color:var(--red)}
+.targets{
+    display:flex;align-items:center;gap:12px;margin-top:14px;padding:10px 12px;border:1px solid var(--border-soft);border-radius:12px;background:#0d0d0f
+}
+.target-item{display:flex;align-items:center;gap:7px}
+.target-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.target-input{
+    width:75px;background:#171719;border:1px solid #29292c;color:var(--text);border-radius:8px;padding:5px 7px;
+    font:500 11px var(--mono);text-align:right
+}
+.target-note{margin-left:auto;color:var(--muted2);font-size:10px}
+.weekly-progress-inline{margin-top:14px;padding:11px 12px;border:1px solid var(--border-soft);border-radius:12px;background:#0d0d0f}
+.weekly-inline-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.weekly-inline-week{margin-top:3px;color:var(--muted);font:500 9px var(--mono)}
+.weekly-inline-value{font:600 10px var(--mono);color:var(--green);white-space:nowrap}
+.weekly-progress-inline .week-progress{margin-top:8px;height:6px}
+
+.table-wrap{
+    margin-top:14px;border:1px solid var(--border-soft);border-radius:18px;background:#08080a;
+    overflow:hidden;box-shadow:var(--shadow)
+}
+.table-scroll{width:100%;overflow:visible}
+table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}
+col.date{width:9%} col.schedule{width:23%}
+col.w7{width:7%} col.w6{width:6%}
+thead th{
+    position:sticky;top:0;z-index:10;background:rgba(18,18,20,.83);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    color:#9a9a9f;font-size:9px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;
+    padding:11px 7px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle
+}
+thead th+th{border-left:1px solid #242427}
+.th-stack{display:flex;flex-direction:column;gap:6px}
+.th-target{display:flex;align-items:center;gap:5px}
+.mini-target{
+    width:46px;background:#171719;border:1px solid #2a2a2d;border-radius:6px;color:#f5f5f7;padding:3px 4px;
+    font:500 9px var(--mono);text-align:right
+}
+tbody.week-body{display:table-row-group}
+.day-row td{
+    padding:8px 7px;border-bottom:1px solid var(--border);vertical-align:top;background:#09090b
+}
+.day-row td+td{border-left:1px solid #1f1f21}
+.day-row.weekend td{background:linear-gradient(0deg,rgba(90,14,18,.09),rgba(90,14,18,.09)),#09090b}
+.day-row.today td{background:rgba(10,132,255,.055)}
+.day-row.today td:first-child{border-left:3px solid var(--blue);padding-left:4px}
+.day-row:last-of-type td{border-bottom:0}
+.date-box{display:flex;flex-direction:column;gap:7px;min-width:0}
+.date-line{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.date-main{font-size:14px;font-weight:600;letter-spacing:-.03em}
+.date-weekday{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.star-btn{
+    width:23px;height:23px;padding:0;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;border-radius:7px
+}
+.star-btn svg{width:16px;height:16px;fill:none;stroke:#646469;stroke-width:1.8;transition:.18s}
+.star-btn.active svg{fill:var(--yellow);stroke:var(--yellow)}
+.star-btn:hover svg{stroke:#c8c8cc}
+.small-note{font-size:9px;color:var(--muted2);line-height:1.35}
+.test-stack{display:flex;flex-direction:column;gap:7px}
+.test-item{padding:7px 8px;border-radius:10px;background:#111114;border:1px solid #262629}
+.pill-row{display:flex;align-items:center;gap:6px;min-width:0}
+.test-pill{
+    display:inline-flex;align-items:center;min-height:19px;padding:2px 7px;border-radius:999px;font:600 9px var(--mono);
+    border:1px solid rgba(10,132,255,.28);background:rgba(10,132,255,.08);color:#b5d9ff;white-space:nowrap
+}
+.test-pill.qapt{border-color:rgba(191,90,242,.28);background:rgba(191,90,242,.08);color:#dec2f6}
+.test-pill.qft{border-color:rgba(48,209,88,.26);background:rgba(48,209,88,.06);color:#b8edc5}
+.test-pill.main{border-color:rgba(255,159,10,.28);background:rgba(255,159,10,.07);color:#ffd9a2}
+.test-syllabus{font-size:9px;line-height:1.35;color:#a8a8ad;margin-top:5px}
+.missions{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.mission{display:flex;align-items:flex-start;gap:5px;font-size:8.5px;color:#bcbcc1;line-height:1.28}
+.mission input,.ios-toggle input,.directive-check{appearance:none;-webkit-appearance:none;cursor:pointer}
+.tiny-check{width:11px;height:11px;border:1px solid #535358;background:#171719;border-radius:3px;flex:none;margin-top:1px;position:relative}
+.tiny-check:checked{background:var(--green);border-color:var(--green)}
+.tiny-check:checked::after{content:"";position:absolute;width:4px;height:2px;border-left:1.5px solid #001a07;border-bottom:1.5px solid #001a07;transform:rotate(-45deg);left:2.6px;top:3px}
+.priority-wrap{margin-top:7px;padding-top:7px;border-top:1px solid #242427}
+.priority-label{font-size:8px;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:3px}
+.autoarea,.cell-area{
+    width:100%;min-width:0;resize:none;overflow:hidden;display:block;border:1px solid transparent;background:transparent;
+    color:#dedee1;padding:3px 4px;border-radius:5px;line-height:1.35;font-size:9px
+}
+.autoarea:hover,.cell-area:hover{background:#121215}
+.autoarea:focus,.cell-area:focus{background:#151518;border-color:#2d2d31}
+.tag-preview{display:none;min-height:17px;flex-wrap:wrap;gap:3px;align-items:center;padding:2px 4px}
+.priority-wrap.tagged .autoarea{display:none}
+.priority-wrap.tagged .tag-preview{display:flex}
+.tag{
+    display:inline-flex;align-items:center;padding:2px 5px;border-radius:5px;font:600 8px var(--mono);border:1px solid transparent
+}
+.tag.phy{background:rgba(10,132,255,.11);border-color:rgba(10,132,255,.25);color:#9dceff}
+.tag.chem{background:rgba(191,90,242,.10);border-color:rgba(191,90,242,.25);color:#dfc5fb}
+.tag.math{background:rgba(255,159,10,.10);border-color:rgba(255,159,10,.25);color:#ffd59e}
+.tag.other{background:rgba(142,142,147,.12);border-color:rgba(142,142,147,.23);color:#c8c8cd}
+.ios-toggle{display:flex;align-items:center;gap:6px;min-height:25px}
+.ios-switch{
+    width:30px;height:18px;border-radius:999px;background:#2a2a2d;border:1px solid #3a3a3e;position:relative;transition:.18s;flex:none
+}
+.ios-switch::after{content:"";position:absolute;width:12px;height:12px;left:2px;top:2px;border-radius:50%;background:#f2f2f2;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.35)}
+.ios-toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.ios-toggle input:checked + .ios-switch{background:var(--green);border-color:var(--green)}
+.ios-toggle input:checked + .ios-switch::after{transform:translateX(12px)}
+.center-col{text-align:center}
+.cell-area.center{text-align:center;font-family:var(--mono)}
+.progress{
+    height:3px;background:#28282b;border-radius:999px;overflow:hidden;margin-top:4px
+}
+.progress > span{display:block;height:100%;width:0;background:var(--green);border-radius:inherit;transition:width .25s}
+.progress.blue > span{background:var(--blue)}
+.metric-read{font:500 8px var(--mono);color:var(--muted2);margin-top:3px;text-align:right}
+.week-footer td{padding:0;border-bottom:1px solid var(--border)}
+.week-card{
+    margin:10px 8px 12px;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,.85fr);gap:18px;
+    padding:15px;border-radius:15px;border:1px solid #29292c;background:linear-gradient(180deg,#141416,#0f0f11)
+}
+.week-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.week-heading{font-size:13px;font-weight:600}
+.week-dates{font:500 9px var(--mono);color:var(--muted)}
+.week-progress{margin-top:10px;height:6px;background:#29292c;border-radius:999px;overflow:hidden}
+.week-progress span{display:block;height:100%;width:0;background:var(--green);transition:width .35s}
+.analytics-grid{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px
+}
+.analytics-item{padding:8px 9px;border:1px solid #252528;background:#101012;border-radius:9px;min-width:0}
+.analytics-item .label{font-size:8px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}
+.analytics-item .val{font:600 12px var(--mono);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.directives{border-left:1px solid #29292c;padding-left:18px}
+.directive-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.directive-title{font-size:11px;font-weight:600}
+.directive-sub{font-size:8px;color:var(--muted2)}
+.directive-input-row{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}
+.directive-input{
+    min-width:0;border:1px solid #2b2b2e;background:#0d0d0f;color:#eee;border-radius:8px;padding:7px 8px;font-size:10px
+}
+.add-btn{
+    border:1px solid #323235;background:#1c1c1f;border-radius:8px;padding:0 10px;font-size:10px;cursor:pointer
+}
+.add-btn:hover{background:#262629}
+.directive-list{display:flex;flex-direction:column;gap:5px;margin-top:8px;max-height:140px;overflow:auto;padding-right:2px}
+.directive-row{display:flex;align-items:center;gap:7px;padding:5px 6px;border:1px solid #242427;background:#111113;border-radius:8px}
+.directive-check{
+    width:14px;height:14px;border:1px solid #4a4a4e;background:#18181a;border-radius:50%;position:relative;flex:none
+}
+.directive-check:checked{background:var(--green);border-color:var(--green)}
+.directive-check:checked::after{content:"";position:absolute;width:5px;height:2px;border-left:1.5px solid #001a07;border-bottom:1.5px solid #001a07;transform:rotate(-45deg);left:3px;top:4px}
+.directive-text{font-size:9px;line-height:1.25;flex:1;word-break:break-word}
+.directive-row.done .directive-text{text-decoration:line-through;color:#6b6b70}
+.delete-btn{border:0;background:transparent;color:#6e6e73;cursor:pointer;font-size:13px;padding:0 2px}
+.delete-btn:hover{color:var(--red)}
+.pagination-wrap{display:flex;justify-content:center;align-items:center;gap:5px;padding:13px 6px 3px}
+.page-btn{
+    width:28px;height:28px;border:1px solid #28282b;background:#111113;color:#8e8e93;border-radius:8px;cursor:pointer;font:500 9px var(--mono)
+}
+.page-btn:hover{background:#1a1a1d;color:#f5f5f7}
+.page-btn.active{background:#1c1c1f;border-color:rgba(10,132,255,.55);color:#fff;box-shadow:0 0 0 1px rgba(10,132,255,.14) inset}
+.page-arrow{width:34px}
+.footer-note{margin-top:10px;color:#55555a;font-size:8px;text-align:center;letter-spacing:.05em}
+.flash{position:fixed;right:18px;bottom:18px;z-index:50;padding:10px 12px;border-radius:10px;background:#1d1d20;border:1px solid #333338;box-shadow:0 14px 30px rgba(0,0,0,.4);font-size:10px;opacity:0;transform:translateY(10px);pointer-events:none;transition:.22s}
+.flash.show{opacity:1;transform:none}
+@media(max-width:1250px){
+    .topbar{grid-template-columns:1fr}
+    .utility-wrap{justify-content:space-between}
+}
+@media(max-width:900px){
+    .app{padding:12px 7px 20px}
+    .utility-grid{grid-template-columns:1fr}
+    .table-wrap{border-radius:12px}
+    .week-card{grid-template-columns:1fr}
+    .directives{border-left:0;border-top:1px solid #29292c;padding-left:0;padding-top:13px}
+}
+@media(max-width:700px){
+    .topbar{padding:13px;border-radius:13px}
+    .brand-title{font-size:17px}
+    .hud-value{font-size:15px}
+    .hud{gap:5px}
+    .hud-card{padding:9px 8px}
+    .target-note{display:none}
+    .targets{justify-content:space-between;gap:6px}
+    .target-label{font-size:8px}
+    .target-input{width:57px;font-size:9px}
+    thead th{font-size:7px;padding:8px 3px;letter-spacing:.07em}
+    .day-row td{padding:6px 3px}
+    .day-row td+td{border-left-color:#18181a}
+    .date-main{font-size:11px}
+    .date-weekday{font-size:7px}
+    .star-btn{width:19px;height:19px}
+    .star-btn svg{width:13px;height:13px}
+    .test-item{padding:5px}
+    .test-pill{font-size:7px;padding:2px 5px}
+    .test-syllabus,.mission{font-size:7px}
+    .priority-label{font-size:7px}
+    .autoarea,.cell-area{font-size:7px;padding:2px}
+    .ios-switch{width:25px;height:15px}
+    .ios-switch::after{width:10px;height:10px}
+    .ios-toggle input:checked + .ios-switch::after{transform:translateX(9px)}
+    .ios-switch::after{left:2px;top:2px}
+    .progress{height:2px}
+    .metric-read{font-size:7px}
+    .week-card{margin:7px 3px 9px;padding:10px;gap:11px}
+    .week-heading{font-size:11px}
+    .week-dates{font-size:8px}
+    .analytics-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+    .analytics-item{padding:6px}
+    .analytics-item .label{font-size:6px}
+    .analytics-item .val{font-size:9px}
+    .pagination-wrap{gap:3px}
+    .page-btn{width:25px;height:25px;font-size:8px}
+}
+
+/* v2 refinement overrides */
+.topbar{grid-template-columns:minmax(300px,1fr) auto;align-items:center}
+.brand-row{min-width:0}
+.utility-wrap{justify-content:flex-end}
+.hud{display:none!important}
+.syllabus-caption{font-size:7px;letter-spacing:.1em;color:#5f6065;text-transform:uppercase;font-weight:600;margin-top:6px}
+.test-syllabus{display:none}
+.missions{gap:4px;margin-top:5px}
+.mission{font-size:8px!important}
+.priority-wrap{margin-top:7px;padding-top:8px;border-top:1px solid #242427}
+.priority-label{font-size:8px;color:#8f8f94;text-transform:uppercase;letter-spacing:.11em;font-weight:600;margin-bottom:5px}
+.todo-composer{display:grid;grid-template-columns:minmax(0,1fr) 22px;gap:5px;align-items:start}
+.todo-input{min-height:20px}
+.todo-add{width:22px;height:22px;border-radius:7px;border:1px solid #343438;background:#171719;color:#aeb0b5;cursor:pointer;font-size:15px;line-height:18px;padding:0}
+.todo-add:hover{background:#232327;color:#fff}
+.todo-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.todo-row{display:flex;align-items:flex-start;gap:5px;padding:4px 4px;border:1px solid #242427;border-radius:7px;background:#101012}
+.todo-row.done .todo-text{text-decoration:line-through;color:#66676c}
+.todo-check{appearance:none;-webkit-appearance:none;width:12px;height:12px;border:1px solid #4b4b50;border-radius:50%;background:#18181a;position:relative;cursor:pointer;flex:none;margin-top:1px}
+.todo-check:checked{background:var(--green);border-color:var(--green)}
+.todo-check:checked::after{content:"";position:absolute;width:5px;height:2px;border-left:1.5px solid #001a07;border-bottom:1.5px solid #001a07;transform:rotate(-45deg);left:3px;top:3px}
+.todo-content{min-width:0;flex:1}
+.todo-text{font-size:8px;line-height:1.35;word-break:break-word}
+.todo-tags{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.todo-tags .tag{font-size:7px;padding:1px 4px}
+.todo-delete{border:0;background:transparent;color:#606166;font-size:13px;line-height:14px;padding:0;cursor:pointer}
+.todo-delete:hover{color:var(--red)}
+.todo-empty{margin:4px 0 1px}
+.countdown-missions{margin-top:11px;padding-top:9px;border-top:1px solid #242427;max-height:118px;overflow:auto}
+.countdown-test + .countdown-test{margin-top:8px;padding-top:8px;border-top:1px solid #1f1f21}
+.countdown-test-name{font:600 10px var(--mono);color:#dfe1e6;margin-bottom:5px}
+.countdown-mission-list{display:flex;flex-direction:column;gap:4px}
+.mission.countdown{font-size:8px!important;color:#a8a8ad}
+.mission.countdown .tiny-check{width:11px;height:11px}
+thead th:nth-last-child(-n+2),tbody td:nth-last-child(-n+2){text-align:center}
+thead th:nth-last-child(-n+2){padding-left:3px;padding-right:3px}
+.numeric-cell .cell-area{text-align:center}
+.numeric-cell .progress{width:100%}
+.numeric-cell .metric-read{text-align:center}
+.mini-target{width:48px;display:block;margin:3px auto 0}
+.th-stack{align-items:center}
+.th-target{justify-content:center;gap:3px;flex-direction:column}
+.week-card.only-progress{display:block;padding:13px 15px}
+.week-card.only-progress .week-progress{margin-top:9px}
+.week-card.only-progress .week-title{align-items:center}
+/* Keep all content inside the fixed table columns. */
+table{table-layout:fixed;width:100%;max-width:100%}
+textarea{max-width:100%}
+@media(max-width:900px){.topbar{grid-template-columns:1fr}.utility-wrap{justify-content:space-between}.countdown-missions{max-height:150px}}
+@media(max-width:700px){.topbar{grid-template-columns:1fr;gap:10px}.utility-wrap{justify-content:space-between}.countdown-missions{max-height:160px}.week-card.only-progress{margin:6px 3px 9px;padding:9px}.weekly-inline-value{font-size:9px}.weekly-progress-inline{padding:9px 10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="shell">
+<header class="topbar">
+    <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 3.7h10M7 20.3h10M4.6 6.1l14.8 11.8M19.4 6.1 4.6 17.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+            <div class="brand-title">Execution Protocol</div>
+            <div class="brand-sub">Aug 31, 2026 — Jan 17, 2027 · Daily JEE Operating System</div>
+        </div>
+        <div class="sync" title="Data is stored in this browser's local storage">
+            <span class="sync-dot"></span><span>LOCAL SYNC</span>
+        </div>
+    </div>
+    <div class="utility-wrap">
+        <div class="sync-date" id="liveStamp">Local data · synced</div>
+        <button class="export-btn" id="exportBtn">Commit CSV / Export Backup</button>
+    </div>
+</header>
+
+<section class="utility-grid">
+    <div class="remaining-card">
+        <div class="card-inner">
+            <div class="card-label"><span>Crack It</span><span class="today-tag" id="todayLabel"></span></div>
+            <div class="remaining-grid">
+                <div><div class="big-metric blue" id="remainingQs">100 <span class="metric-unit">Qs</span></div><div class="eyebrow" style="margin-top:5px">Remaining questions</div></div>
+                <div><div class="big-metric blue" id="remainingHours">10 <span class="metric-unit">hrs</span></div><div class="eyebrow" style="margin-top:5px">Remaining study time</div></div>
+            </div>
+            <div class="targets">
+                <div class="target-item"><span class="target-label">Global Q Target</span><input class="target-input" id="globalQsTarget" type="number" min="1" step="1" value="100"></div>
+                <div class="target-item"><span class="target-label">Global H Target</span><input class="target-input" id="globalHoursTarget" type="number" min="0.1" step="0.5" value="10"></div>
+                <div class="target-note">Applied live across daily bars + weekly questions progress</div>
+            </div>
+            <div class="weekly-progress-inline">
+                <div class="weekly-inline-head">
+                    <div>
+                        <div class="target-label">Weekly Questions Progress</div>
+                        <div class="weekly-inline-week" id="weeklyProgressWeek">Week 20 · Questions Done</div>
+                    </div>
+                    <div class="weekly-inline-value" id="weeklyProgressLabel">0 / 700 Qs</div>
+                </div>
+                <div class="week-progress"><span id="weeklyProgressFill" style="width:0%"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="countdown-card">
+        <div class="card-inner">
+            <div class="card-label"><span>Next Test Countdown</span><span class="today-tag">SCHEDULED</span></div>
+            <div class="countdown-main">
+                <div style="min-width:0">
+                    <div class="next-name" id="nextTestName">—</div>
+                    <div class="next-date" id="nextTestDate">—</div>
+                </div>
+                <div class="days" id="nextTestDays">—</div>
+            </div>
+            <div class="countdown-missions" id="countdownMissions"></div>
+            <div class="small-note" style="margin-top:8px">Test syllabus is tracked as individual chapter checkboxes. The same completion state appears in the scheduled table.</div>
+        </div>
+    </div>
+</section>
+
+<div class="table-wrap">
+<div class="table-scroll">
+<table id="protocolTable" aria-label="Execution Protocol daily tracker">
+<colgroup>
+    <col class="date"><col class="schedule">
+    <col class="w7"><col class="w7"><col class="w7"><col class="w7"><col class="w7"><col class="w7"><col class="w7"><col class="w7">
+    <col class="w6"><col class="w6">
+</colgroup>
+<thead>
+<tr>
+    <th>Date</th>
+    <th>Schedule &amp; Priority</th>
+    <th>IOC/PC Sheet</th>
+    <th>Phy Lec</th>
+    <th>Chem QCT</th>
+    <th>Math Lec</th>
+    <th>Phy DPP</th>
+    <th>IOC/OC Lec</th>
+    <th>Math RBC</th>
+    <th>Phy QCT</th>
+    <th><div class="th-stack"><span>Total Qs</span><div class="th-target"><span>Target</span><input id="tableQsTarget" class="mini-target" type="number" min="1" step="1" value="100" aria-label="Global question target"></div></div></th>
+    <th><div class="th-stack"><span>Hours</span><div class="th-target"><span>Target</span><input id="tableHoursTarget" class="mini-target" type="number" min=".1" step=".5" value="10" aria-label="Global hours target"></div></div></th>
+</tr>
+</thead>
+<tbody id="weekContainer"></tbody>
+</table>
+</div>
+</div>
+
+<nav class="pagination-wrap" id="pagination" aria-label="Week pagination"></nav>
+<div class="footer-note">Execution Protocol · browser-local persistence · no data leaves this device unless you export it</div>
+</div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+const START_DATE = "2026-08-31";
+const END_DATE = "2027-01-17";
+const STORAGE = {
+    dayPrefix: "executionProtocol:day:",
+    weekPrefix: "executionProtocol:week:",
+    targets: "executionProtocol:targets"
+};
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-jdmdeHp2sdzQ95ynDMwU0OvBZ90L-DytHy9qKlCAhkzOku-jTHX8GjCpjNNdC5rdcw/exec";
+
+const TEST_SCHEDULE = {
+    "2026-09-06": [
+        {
+            "name": "[QPT 7]",
+            "syllabus": "Phy: Mech. Prop. Fluids, Mech. Prop. Solids, Oscillations | Chem: IUPAC Nomenclature, GOC, Isomerism | Math: Matrices, Determinants"
+        }
+    ],
+    "2026-09-13": [
+        {
+            "name": "[QPT 8]",
+            "syllabus": "All Chapters from QPT 5 to QPT 7. PYQS JEE Main Prep Check"
+        }
+    ],
+    "2026-09-20": [
+        {
+            "name": "[QAPT 5]",
+            "syllabus": "Phy: KTG, Thermal Prop., Thermodynamics | Chem: Periodicity, Chemical Bonding | Math: Parabola, Ellipse, Hyperbola"
+        }
+    ],
+    "2026-09-23": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-09-27": [
+        {
+            "name": "[QPT 9]",
+            "syllabus": "Phy: Electrostatics, Gravitation | Chem: Hydrocarbons, Haloalkanes & Haloarenes | Math: Sets & Relations, Functions, Inverse Trigonometry"
+        }
+    ],
+    "2026-09-29": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-10-03": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-10-04": [
+        {
+            "name": "[QAPT 6]",
+            "syllabus": "Phy: Mech. Prop. Fluids, Mech. Prop. Solids, Oscillations | Chem: IUPAC Nomenclature, GOC, Isomerism | Math: Matrices, Determinants"
+        }
+    ],
+    "2026-10-07": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-10-11": [
+        {
+            "name": "[QPT 10]",
+            "syllabus": "Phy: Capacitance, Current Electricity | Chem: Alcohols Phenols Ethers, Aldehydes & Ketones | Math: Limits, Continuity & Diff., Application of Derivatives"
+        },
+        {
+            "name": "[QAPT 7]",
+            "syllabus": "Phy: Electrostatics, Gravitation | Chem: Hydrocarbons, Haloalkanes & Haloarenes | Math: Sets & Relations, Functions, Inverse Trigonometry"
+        }
+    ],
+    "2026-10-14": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-10-18": [
+        {
+            "name": "[QPT 11]",
+            "syllabus": "All Chapters of QPT 9 & 10 PYQS JEE Main Prep Check"
+        }
+    ],
+    "2026-10-21": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-10-25": [
+        {
+            "name": "[QPT 12]",
+            "syllabus": "Phy: Magnetic Effects of Current, Magnetic Prop. of Matter | Chem: Carboxylic Acid Derivatives, Amines | Math: Indefinite Integration, Definite Integration"
+        },
+        {
+            "name": "[QAPT 8]",
+            "syllabus": "Phy: Capacitance, Current Electricity | Chem: Alcohols Phenols Ethers, Aldehydes & Ketones | Math: Limits, Continuity & Diff., Application of Derivatives"
+        }
+    ],
+    "2026-10-28": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-01": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-05": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-08": [
+        {
+            "name": "[QPT 13]",
+            "syllabus": "Phy: EM Induction, Alternating Current | Chem: Biomolecules, Coordination Compounds | Math: Area Under Curves, Differential Equations"
+        },
+        {
+            "name": "[QAPT 9]",
+            "syllabus": "Phy: Magnetic Effects of Current, Magnetic Prop. of Matter | Chem: Carboxylic Acid Derivatives, Amines | Math: Indefinite Integration, Definite Integration"
+        }
+    ],
+    "2026-11-15": [
+        {
+            "name": "[QPT 14]",
+            "syllabus": "All Chapters of QPT 12 & 13. PYQS JEE Main Prep Check"
+        }
+    ],
+    "2026-11-18": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-21": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-22": [
+        {
+            "name": "[QPT 15]",
+            "syllabus": "Phy: Wave Optics, Ray Optics | Chem: d & f Block, p Block, Practical Chemistry | Math: 3D Geometry, Vector Algebra"
+        },
+        {
+            "name": "[QAPT 10]",
+            "syllabus": "Phy: Alternating Current, EM Induction | Chem: Biomolecules, Polymers, Chem. in Everyday Life, Surface, Environmental | Math: Area Under Curves, Differential Equations"
+        }
+    ],
+    "2026-11-25": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-11-29": [
+        {
+            "name": "[QPT 16]",
+            "syllabus": "Phy: Waves & Sound, EM Waves, Semiconductors | Chem: General Organic Chemistry, Hydrocarbons | Math: Complex Number, Probability, Statistics"
+        },
+        {
+            "name": "[QFT 1]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-01": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-04": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-06": [
+        {
+            "name": "[QAPT 11]",
+            "syllabus": "Phy: Wave Optics, Ray Optics | Chem: s Block & Hydrogen, p Block, Metallurgy | Math: 3D Geometry, Vector Algebra"
+        },
+        {
+            "name": "[QFT 2]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-08": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-10": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-12": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-13": [
+        {
+            "name": "[QFT 3]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-14": [
+        {
+            "name": "[2026]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-17": [
+        {
+            "name": "[QFT 4]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-20": [
+        {
+            "name": "[QAPT 12]",
+            "syllabus": "Phy: Waves & Sound, EM Waves, Semiconductors | Chem: d & f Block, Coordination Compounds, Practical Chemistry | Math: Complex Number, Probability, Statistics"
+        },
+        {
+            "name": "[QFT 5]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-24": [
+        {
+            "name": "[QFT 6]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-27": [
+        {
+            "name": "[QFT 7]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2026-12-31": [
+        {
+            "name": "[QFT 8]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-03": [
+        {
+            "name": "[QFT 9]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-06": [
+        {
+            "name": "[QFT 10]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-08": [
+        {
+            "name": "[QFT 11]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-10": [
+        {
+            "name": "[QFT 12]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-12": [
+        {
+            "name": "[QFT 13]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-14": [
+        {
+            "name": "[QFT 14]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ],
+    "2027-01-15": [
+        {
+            "name": "[QFT 15]",
+            "syllabus": "JEE Main Full Syllabus"
+        }
+    ]
+};
+
+const dayFields = ["iocpc","phylec","chemqct","mathlec","phydpp","iococlec","mathrbc","phyqct","qs","hours","priority","todos","star"];
+const textareaFields = new Set(["iocpc","chemqct","phydpp","mathrbc","phyqct","qs","hours"]);
+const toggleFields = new Set(["phylec","mathlec","iococlec"]);
+
+let weeks = [];
+let currentWeek = 0;
+let stateCache = {};
+let targetState = loadTargets();
+let flashTimer;
+
+function pad(n){ return String(n).padStart(2,"0"); }
+function parseKey(k){ const [y,m,d]=k.split("-").map(Number); return new Date(Date.UTC(y,m-1,d)); }
+function keyFromDate(d){ return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`; }
+function addDays(key,n){ const d=parseKey(key); d.setUTCDate(d.getUTCDate()+n); return keyFromDate(d); }
+function daysBetween(a,b){ return Math.round((parseKey(b)-parseKey(a))/86400000); }
+function getIndiaToday(){
+    const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+    const o=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+    return `${o.year}-${o.month}-${o.day}`;
+}
+function fmtDate(key,full=false){
+    const d=parseKey(key);
+    return new Intl.DateTimeFormat("en-US",{timeZone:"UTC",month:"short",day:"numeric",year:full?"numeric":undefined,weekday:full?"long":undefined}).format(d);
+}
+function fmtRange(a,b){
+    const da=parseKey(a),db=parseKey(b);
+    const mo=d=>new Intl.DateTimeFormat("en-US",{timeZone:"UTC",month:"short",day:"numeric"}).format(d);
+    return `${mo(da)} – ${mo(db)}`;
+}
+function isWeekend(key){ const n=parseKey(key).getUTCDay(); return n===0||n===6; }
+function showFlash(msg){
+    const el=document.getElementById("flash"); el.textContent=msg; el.classList.add("show");
+    clearTimeout(flashTimer); flashTimer=setTimeout(()=>el.classList.remove("show"),1800);
+}
+function readJSON(key,fallback){ try{const x=localStorage.getItem(key); return x?JSON.parse(x):fallback;}catch{return fallback;} }
+function writeJSON(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
+function loadTargets(){ const saved=readJSON(STORAGE.targets,{qs:100,hours:10}); return {qs:Number(saved.qs)||100,hours:Number(saved.hours)||10}; }
+function saveTargets(){ writeJSON(STORAGE.targets,targetState); }
+function normalizeTodos(day){
+    if(Array.isArray(day.todos)) return day.todos;
+    const legacy=String(day.priority||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    day.todos=legacy.map(text=>({text,done:false}));
+    return day.todos;
+}
+function getDay(key){
+    if(!stateCache[key]){
+        stateCache[key]=Object.assign({priority:"",todos:[],star:false},readJSON(STORAGE.dayPrefix+key,{}));
+        normalizeTodos(stateCache[key]);
+    }
+    return stateCache[key];
+}
+function persistDay(key){ 
+    // 1. Keep the instant local save
+    writeJSON(STORAGE.dayPrefix+key, stateCache[key]); 
+    
+    // 2. Fire-and-forget sync to Google Sheets
+    fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" }, // no-cors requires text/plain
+        body: JSON.stringify({ date: key, data: stateCache[key] })
+    }).catch(err => console.error("Sync failed:", err));
+}
+function getWeekState(index){ return readJSON(STORAGE.weekPrefix+weeks[index].start,{items:[]}); }
+function setWeekState(index,obj){ writeJSON(STORAGE.weekPrefix+weeks[index].start,obj); }
+function buildWeeks(){
+    weeks=[]; let cur=START_DATE;
+    while(cur<=END_DATE){ const days=[]; for(let i=0;i<7;i++) days.push(addDays(cur,i)); weeks.push({start:cur,end:days[6],days}); cur=addDays(cur,7); }
+}
+function starSVG(){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.55 5.17 5.7.83-4.13 4.02.97 5.68L12 16.62l-5.09 2.68.97-5.68-4.13-.83-4.13-4.02 5.7-.83L12 3.6Z"/></svg>`; }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
+function parseFirstNumber(text){ const m=String(text??"").replace(/,/g,"").match(/-?\d+(?:\.\d+)?/); return m?Number(m[0]):0; }
+function formatNum(n){ return Number.isInteger(n)?String(n):Number(n).toFixed(1).replace(/\.0$/,""); }
+function autoResize(el){ if(!el)return; el.style.height="auto"; el.style.height=Math.max(18,el.scrollHeight)+"px"; }
+function subjectClass(name){ if(name.includes("QAPT"))return"qapt"; if(name.includes("QFT"))return"qft"; if(name.includes("2026"))return"main"; return""; }
+function renderTagBits(text){
+    const parts=String(text??"").split(/(\[PHY\]|\[CHEM\]|#MATH|#PHY|#CHEM)/gi);
+    return parts.filter(Boolean).map(part=>{
+        const up=part.toUpperCase(); let cls="other";
+        if(up==="[PHY]"||up==="#PHY")cls="phy"; else if(up==="[CHEM]"||up==="#CHEM")cls="chem"; else if(up==="#MATH")cls="math";
+        return `<span class="tag ${cls}">${esc(part)}</span>`;
+    }).join("");
+}
+function testChapters(syllabus){
+    const chunks=String(syllabus||"").split("|").map(x=>x.trim()).filter(Boolean);
+    const out=[];
+    chunks.forEach(chunk=>{
+        const colon=chunk.indexOf(":");
+        if(colon>0 && colon<12){
+            const subject=chunk.slice(0,colon).trim();
+            const body=chunk.slice(colon+1).trim();
+            const chapters=body.split(",").map(x=>x.trim()).filter(Boolean);
+            if(chapters.length>1) chapters.forEach(ch=>out.push(`${subject}: ${ch}`));
+            else out.push(chunk);
+        } else out.push(chunk);
+    });
+    return out;
+}
+function missionKey(date,ti,ci){ return `mission2:${date}:${ti}:${ci}`; }
+function renderMissionList(key,test,ti,day,mode="table"){
+    let ci=0,html="";
+    testChapters(test.syllabus).forEach(ch=>{
+        const mk=missionKey(key,ti,ci++), checked=!!day[mk];
+        html+=`<label class="mission ${mode}"><input class="tiny-check mission-box" type="checkbox" data-date="${key}" data-mission="${mk}" ${checked?"checked":""}><span>${esc(ch)}</span></label>`;
+    });
+    return html;
+}
+function renderTests(key,day){
+    const tests=TEST_SCHEDULE[key]||[];
+    if(!tests.length)return `<div class="small-note">No scheduled test</div>`;
+    return `<div class="test-stack">${tests.map((t,ti)=>`
+        <div class="test-item">
+            <div class="pill-row"><span class="test-pill ${subjectClass(t.name)}">${esc(t.name)}</span></div>
+            <div class="syllabus-caption">SYLLABUS</div>
+            <div class="missions">${renderMissionList(key,t,ti,day)}</div>
+        </div>`).join("")}</div>`;
+}
+function renderTodos(key,day){
+    const todos=normalizeTodos(day);
+    return `<div class="priority-wrap">
+        <div class="priority-label">Today's Priority</div>
+        <div class="todo-composer">
+            <textarea rows="1" class="autoarea todo-input" data-date="${key}" placeholder="Add today's priority…" aria-label="Today's priority"></textarea>
+            <button class="todo-add" data-add-todo="${key}" title="Add priority">+</button>
+        </div>
+        <div class="todo-list">${todos.map((it,ii)=>`<div class="todo-row ${it.done?"done":""}">
+            <input class="todo-check" type="checkbox" data-todo-toggle="${key}:${ii}" ${it.done?"checked":""}>
+            <div class="todo-content"><div class="todo-text">${esc(it.text)}</div>${/(\[PHY\]|\[CHEM\]|#MATH|#PHY|#CHEM)/i.test(it.text)?`<div class="todo-tags">${renderTagBits(it.text)}</div>`:""}</div>
+            <button class="todo-delete" data-todo-delete="${key}:${ii}" aria-label="Delete priority">×</button>
+        </div>`).join("")||`<div class="small-note todo-empty">No priorities added yet.</div>`}</div>
+    </div>`;
+}
+function toggleCell(key,day,field,label){
+    return `<label class="ios-toggle" title="${label}"><input type="checkbox" class="toggle-box" data-date="${key}" data-field="${field}" ${day[field]?"checked":""}><span class="ios-switch"></span></label>`;
+}
+function textCell(key,day,field){
+    const val=day[field]??"";
+    if(field==="qs"||field==="hours"){
+        const num=parseFirstNumber(val),target=field==="qs"?targetState.qs:targetState.hours,pct=target?Math.max(0,Math.min(100,(num/target)*100)):0;
+        return `<textarea rows="1" class="autoarea cell-area center" data-date="${key}" data-field="${field}" aria-label="${field}">${esc(val)}</textarea><div class="progress ${field==="hours"?"blue":""}"><span style="width:${pct}%"></span></div><div class="metric-read">${formatNum(num)} / ${formatNum(target)}</div>`;
+    }
+    return `<textarea rows="1" class="autoarea cell-area" data-date="${key}" data-field="${field}" aria-label="${field}">${esc(val)}</textarea>`;
+}
+function renderWeek(index){
+    currentWeek=index; const week=weeks[index],today=getIndiaToday(),container=document.getElementById("weekContainer");
+    const rows=week.days.map(key=>{
+        const day=getDay(key),d=parseKey(key),weekday=new Intl.DateTimeFormat("en-US",{timeZone:"UTC",weekday:"short"}).format(d),classes=[isWeekend(key)?"weekend":"",key===today?"today":""].filter(Boolean).join(" ");
+        return `<tr class="day-row ${classes}" data-date-row="${key}">
+            <td><div class="date-box"><div class="date-line"><div><div class="date-main">${fmtDate(key)}</div><div class="date-weekday">${weekday}</div></div><button class="star-btn ${day.star?"active":""}" data-star-date="${key}" aria-label="Star ${fmtDate(key)}">${starSVG()}</button></div><div class="small-note">${key===today?"TODAY":isWeekend(key)?"WEEKEND":"PROTOCOL DAY"}</div></div></td>
+            <td>${renderTests(key,day)}${renderTodos(key,day)}</td>
+            <td>${textCell(key,day,"iocpc")}</td>
+            <td class="center-col">${toggleCell(key,day,"phylec","Physics lecture complete")}</td>
+            <td>${textCell(key,day,"chemqct")}</td>
+            <td class="center-col">${toggleCell(key,day,"mathlec","Math lecture complete")}</td>
+            <td>${textCell(key,day,"phydpp")}</td>
+            <td class="center-col">${toggleCell(key,day,"iococlec","IOC / OC lecture complete")}</td>
+            <td>${textCell(key,day,"mathrbc")}</td>
+            <td>${textCell(key,day,"phyqct")}</td>
+            <td class="numeric-cell">${textCell(key,day,"qs")}</td>
+            <td class="numeric-cell">${textCell(key,day,"hours")}</td>
+        </tr>`;
+    }).join("");
+    container.innerHTML=rows;
+    container.querySelectorAll(".autoarea").forEach(autoResize);
+    updatePagination();
+    updateCurrentWeekProgress();
+}
+function updatePagination(){
+    const el=document.getElementById("pagination");
+    el.innerHTML=`<button class="page-btn page-arrow" data-page="${Math.max(0,currentWeek-1)}" ${currentWeek===0?"disabled":""}>‹</button>`+weeks.map((_,i)=>`<button class="page-btn ${i===currentWeek?"active":""}" data-page="${i}" aria-label="Week ${20-i}">${20-i}</button>`).join("")+`<button class="page-btn page-arrow" data-page="${Math.min(weeks.length-1,currentWeek+1)}" ${currentWeek===weeks.length-1?"disabled":""}>›</button>`;
+}
+function updateLiveMetrics(){
+    updateRemaining(); updateRowProgresses(); updateCurrentWeekProgress(); updateCountdown();
+    document.getElementById("liveStamp").textContent=`Local data · ${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;
+}
+function updateRemaining(){
+    const today=getIndiaToday(),d=getDay(today),rq=Math.max(0,targetState.qs-parseFirstNumber(d.qs)),rh=Math.max(0,targetState.hours-parseFirstNumber(d.hours));
+    document.getElementById("remainingQs").innerHTML=`${formatNum(rq)} <span class="metric-unit">Qs</span>`;
+    document.getElementById("remainingHours").innerHTML=`${formatNum(rh)} <span class="metric-unit">hrs</span>`;
+    document.getElementById("todayLabel").textContent=fmtDate(today);
+}
+function updateRowProgresses(){
+    document.querySelectorAll(".day-row").forEach(row=>{
+        const key=row.dataset.dateRow,d=getDay(key);
+        row.querySelectorAll(".progress").forEach(bar=>{
+            const area=bar.previousElementSibling;if(!area)return;
+            const field=area.dataset.field,target=field==="qs"?targetState.qs:targetState.hours,num=parseFirstNumber(area.value),pct=target?Math.max(0,Math.min(100,num/target*100)):0;
+            const fill=bar.querySelector("span"),read=bar.nextElementSibling;if(fill)fill.style.width=pct+"%";if(read)read.textContent=`${formatNum(num)} / ${formatNum(target)}`;
+        });
+    });
+}
+function updateCurrentWeekProgress(){
+    const week=weeks[currentWeek];
+    if(!week)return;
+    const qTotal=week.days.reduce((sum,key)=>sum+parseFirstNumber(getDay(key).qs),0);
+    const target=targetState.qs*7;
+    const pct=target?Math.min(100,qTotal/target*100):0;
+    const fill=document.getElementById("weeklyProgressFill");
+    const label=document.getElementById("weeklyProgressLabel");
+    const weekLabel=document.getElementById("weeklyProgressWeek");
+    if(fill)fill.style.width=pct+"%";
+    if(label)label.textContent=`${formatNum(qTotal)} / ${formatNum(target)} Qs`;
+    if(weekLabel)weekLabel.textContent=`Week ${20-currentWeek} · Questions Done`;
+}
+function renderCountdownMissions(date,tests){
+    const html=tests.map((t,ti)=>`<div class="countdown-test"><div class="countdown-test-name">${esc(t.name)}</div><div class="countdown-mission-list">${testChapters(t.syllabus).map((ch,ci)=>{
+        const d=getDay(date),key=missionKey(date,ti,ci); return `<label class="mission countdown"><input class="tiny-check mission-box" type="checkbox" data-date="${date}" data-mission="${key}" ${d[key]?"checked":""}><span>${esc(ch)}</span></label>`;
+    }).join("")}</div></div>`).join("");
+    document.getElementById("countdownMissions").innerHTML=html;
+}
+function updateCountdown(){
+    const today=getIndiaToday(),all=Object.entries(TEST_SCHEDULE).sort((a,b)=>a[0].localeCompare(b[0])),next=all.find(([date])=>date>=today);
+    const nameEl=document.getElementById("nextTestName"),dateEl=document.getElementById("nextTestDate"),daysEl=document.getElementById("nextTestDays");
+    if(!next){nameEl.textContent="Protocol complete";dateEl.textContent="No future scheduled tests";daysEl.textContent="—";document.getElementById("countdownMissions").innerHTML="";return;}
+    const [date,tests]=next,delta=daysBetween(today,date);
+    nameEl.textContent=tests.map(t=>t.name).join(" + "); dateEl.textContent=fmtDate(date,true); daysEl.textContent=delta===0?"TODAY":`${delta}d`; daysEl.classList.toggle("today",delta===0);
+    renderCountdownMissions(date,tests);
+}
+function syncTargetInputs(){ document.getElementById("globalQsTarget").value=targetState.qs; document.getElementById("tableQsTarget").value=targetState.qs; document.getElementById("globalHoursTarget").value=targetState.hours; document.getElementById("tableHoursTarget").value=targetState.hours; }
+function applyTargets(qs,hours){ targetState.qs=Math.max(1,Number(qs)||100); targetState.hours=Math.max(.1,Number(hours)||10); saveTargets(); syncTargetInputs(); renderWeek(currentWeek); updateLiveMetrics(); }
+function persistField(key,field,value){ const d=getDay(key); d[field]=value; stateCache[key]=d; persistDay(key); }
+function addTodo(key,text){ const d=getDay(key); normalizeTodos(d).push({text,done:false}); d.priority=d.todos.map(x=>x.text).join("\n"); persistDay(key); renderWeek(currentWeek); updateLiveMetrics(); }
+function updateTodo(key,index,done){ const d=getDay(key); normalizeTodos(d)[index].done=done; persistDay(key); const row=document.querySelector(`[data-todo-toggle="${key}:${index}"]`)?.closest(".todo-row"); if(row)row.classList.toggle("done",done); }
+function deleteTodo(key,index){ const d=getDay(key); normalizeTodos(d).splice(index,1); d.priority=d.todos.map(x=>x.text).join("\n"); persistDay(key); renderWeek(currentWeek); updateLiveMetrics(); }
+function exportCSV(){
+    const headers=["Date","Day","Starred","Schedule","Syllabus Chapters / Status","Today's Priority","IOC/PC Sheet","Phy Lec","Chem QCT","Math Lec","Phy DPP","IOC/OC Lec","Math RBC","Phy QCT","Total Qs","Hours"];
+    const lines=[headers.map(csvCell).join(",")]; const allDays=[];
+    for(let i=0;i<=daysBetween(START_DATE,END_DATE);i++)allDays.push(addDays(START_DATE,i));
+    allDays.forEach(key=>{
+        const d=getDay(key),tests=TEST_SCHEDULE[key]||[],missions=[];
+        tests.forEach((t,ti)=>testChapters(t.syllabus).forEach((ch,ci)=>{const k=missionKey(key,ti,ci);missions.push(`${d[k]?"✓":"○"} ${ch}`);}));
+        const schedule=tests.map(t=>t.name).join(" + "),weekday=new Intl.DateTimeFormat("en-US",{timeZone:"UTC",weekday:"long"}).format(parseKey(key));
+        const priorities=normalizeTodos(d).map(x=>`${x.done?"✓":"○"} ${x.text}`).join(" | ");
+        const row=[key,weekday,d.star?"YES":"",schedule,missions.join(" | "),priorities,d.iocpc||"",d.phylec?"YES":"",d.chemqct||"",d.mathlec?"YES":"",d.phydpp||"",d.iococlec?"YES":"",d.mathrbc||"",d.phyqct||"",formatNum(parseFirstNumber(d.qs)),formatNum(parseFirstNumber(d.hours))];
+        lines.push(row.map(csvCell).join(","));
+    });
+    const blob=new Blob([lines.join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); const url=URL.createObjectURL(blob);
+    a.href=url;a.download=`execution_protocol_${START_DATE}_to_${END_DATE}.csv`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);showFlash("Backup CSV committed.");
+}
+function csvCell(v){ const s=String(v??""); return /[",\n\r]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }
+
+document.addEventListener("input",e=>{
+    const t=e.target;
+    if(t.matches(".cell-area,.autoarea.todo-input")){
+        autoResize(t);
+        if(t.dataset.field) persistField(t.dataset.date,t.dataset.field,t.value);
+    }
+});
+document.addEventListener("change",e=>{
+    const t=e.target;
+    if(t.matches(".toggle-box")){ persistField(t.dataset.date,t.dataset.field,t.checked); updateLiveMetrics(); return; }
+    if(t.matches(".mission-box")){ const d=getDay(t.dataset.date); d[t.dataset.mission]=t.checked; persistDay(t.dataset.date); showFlash(t.checked?"Chapter marked complete.":"Chapter reopened."); updateCountdown(); return; }
+    if(t.matches(".todo-check")){ const [key,indexRaw]=t.dataset.todoToggle.split(":"); updateTodo(key,Number(indexRaw),t.checked); }
+});
+document.addEventListener("click",e=>{
+    const star=e.target.closest("[data-star-date]");
+    if(star){ const key=star.dataset.starDate,d=getDay(key);d.star=!d.star;persistDay(key);star.classList.toggle("active",d.star);return; }
+    const pg=e.target.closest("[data-page]");
+    if(pg&&!pg.disabled){ renderWeek(Number(pg.dataset.page)); updateLiveMetrics(); return; }
+    const add=e.target.closest("[data-add-todo]");
+    if(add){ const key=add.dataset.addTodo,input=add.closest(".todo-composer")?.querySelector(".todo-input"); const text=input?.value.trim(); if(text){addTodo(key,text);showFlash("Priority added.");} return; }
+    const del=e.target.closest("[data-todo-delete]");
+    if(del){ const parts=del.dataset.todoDelete.split(":");deleteTodo(parts[0],Number(parts[1]));showFlash("Priority removed."); return; }
+});
+document.addEventListener("keydown",e=>{
+    if(e.key==="Enter"&&!e.shiftKey&&e.target.matches(".todo-input")){ e.preventDefault(); const btn=e.target.closest(".todo-composer")?.querySelector(".todo-add"); btn?.click(); }
+});
+["globalQsTarget","tableQsTarget"].forEach(id=>document.getElementById(id).addEventListener("change",e=>applyTargets(e.target.value,document.getElementById("globalHoursTarget").value)));
+["globalHoursTarget","tableHoursTarget"].forEach(id=>document.getElementById(id).addEventListener("change",e=>applyTargets(document.getElementById("globalQsTarget").value,e.target.value)));
+document.getElementById("exportBtn").addEventListener("click",exportCSV);
+
+async function loadCloudData() {
+    const liveStamp = document.getElementById("liveStamp");
+    liveStamp.textContent = "Syncing from cloud...";
+    try {
+        const response = await fetch(WEB_APP_URL);
+        const cloudData = await response.json();
+        
+        Object.assign(stateCache, cloudData);
+        
+        renderWeek(currentWeek);
+        updateLiveMetrics();
+        liveStamp.textContent = "Cloud data · synced";
+    } catch (err) {
+        liveStamp.textContent = "Cloud sync failed · Local mode active";
+    }
+}
+buildWeeks();
+syncTargetInputs();
+renderWeek(0);
+updateLiveMetrics();
+setInterval(updateLiveMetrics,30000);
+loadCloudData();
+</script>
+</body>
+</html>
