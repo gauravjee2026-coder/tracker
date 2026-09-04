@@ -1034,17 +1034,30 @@ async function loadCloudData() {
     const liveStamp = document.getElementById("liveStamp");
     liveStamp.textContent = "Syncing from cloud...";
     try {
-        const response = await fetch(WEB_APP_URL);
+        // 1. Add a timestamp to the URL. This makes the link "unique" every single time, 
+        // completely blocking the browser from using old, cached data.
+        const cacheBuster = new Date().getTime();
+        const response = await fetch(WEB_APP_URL + "?nocache=" + cacheBuster);
         const cloudData = await response.json();
         
+        // 2. Merge the fresh cloud data into active memory
         Object.assign(stateCache, cloudData);
         
+        // 3. Overwrite the device's old local storage with the new cloud data 
+        // so they stop fighting each other.
+        for (const key in cloudData) {
+            writeJSON(STORAGE.dayPrefix + key, cloudData[key]);
+        }
+        
+        // 4. Force the UI to visually update
         renderWeek(currentWeek);
         updateLiveMetrics();
         liveStamp.textContent = "Cloud data · synced";
     } catch (err) {
         liveStamp.textContent = "Cloud sync failed · Local mode active";
+        console.error(err);
     }
+}
 }
 buildWeeks();
 syncTargetInputs();
